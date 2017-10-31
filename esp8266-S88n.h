@@ -36,13 +36,12 @@ public:
   bool start(uint8_t modules); // start S88 bus with the number of modules specified
   bool stop();                 // stop S88 bus
   void checkS88Data();         // check if the S88 data has changed and notify
-  void getData(byte *data);    // get current S88 data
+  byte* getData();    // get current S88 data
 
   // public for calling from timer interrupt
-  void S88ISR();            // Interrupt Service Routine
-  static S88nClass *object; // for calling from ISR
-
+  static inline void S88ISRTrigger();
 private:
+  void S88ISR();            // Interrupt Service Routine
   void S88readData(); // Read data byte from S88
 
   uint8_t S88Module;  // number of 8 port S88 modules
@@ -58,6 +57,7 @@ private:
 
   byte *S88data; //data buffer
   os_timer_t S88Timer;
+  static S88nClass *object; // for calling from ISR
 };
 
 // #if defined(__cplusplus)

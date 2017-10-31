@@ -6,6 +6,10 @@
 */
 #include "esp8266-S88n.h"
 
+void S88ISRProxy(void *pArg) {
+  S88nClass::S88ISRTrigger();
+}  
+
 S88nClass *S88nClass::object = 0;
 
 S88nClass::S88nClass() 
@@ -13,15 +17,19 @@ S88nClass::S88nClass()
   S88Module = 0;
   S88RCount = 0;
   S88RMCount = 0;
+
+  pinMode(S88ResetPin, OUTPUT);    //Reset
+  pinMode(S88PSPin, OUTPUT);      //PS/LOAD
+  pinMode(S88ClkPin, OUTPUT);      //Clock
+  digitalWrite(S88ResetPin, LOW);
+  digitalWrite(S88PSPin, LOW);      //init
+  digitalWrite(S88ClkPin, LOW);
+  pinMode(S88DataPin, INPUT);
+  
   S88Status = S88nClass::S88DATA_INIT;
   object = this;
 }
 
-void S88ISRProxy(void *pArg) {
-  if(S88nClass::object) {
-    S88nClass::object->S88ISR();
-  }
-}  
   
 bool S88nClass::start(uint8_t modules)
 {
@@ -62,9 +70,16 @@ bool S88nClass::stop()
   S88Status = S88nClass::S88DATA_INIT;
 }
 
-void S88nClass::getData(byte *data)
+byte* S88nClass::getData()
 {
-  data = S88data;
+  return S88data;
+}
+
+inline void S88nClass::S88ISRTrigger()
+{
+  if(object) {
+    object->S88ISR();
+  }
 }
 
 //--------------------------------------------------------------
@@ -118,7 +133,7 @@ void S88nClass::S88readData()
   if (bitRead(S88data[Modul], Port) != getData)
   {
     bitWrite(S88data[Modul], Port, getData);
-    S88Status == S88nClass::S88DATA_READING;
+    S88Status = S88nClass::S88DATA_READING;
   }
   S88RMCount++;
 }
@@ -127,7 +142,7 @@ void S88nClass::S88readData()
 //Check if S88 data has changed and notify
 void S88nClass::checkS88Data()
 {
-  if (S88Status)
+  if (S88Status == S88nClass::S88DATA_CHANGED)
   {
     if(notifyS88Data) {
       notifyS88Data(S88data);
